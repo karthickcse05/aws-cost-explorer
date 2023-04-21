@@ -1,0 +1,22 @@
+{
+  "name": "aws_costexplorer",
+  "version": "1.0.0",
+  "description": "test",
+  "main": "index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prebuild": "rm -rf dist",
+    "build": "esbuild src/index.ts --bundle --minify --sourcemap --platform=node --target=es2020 --outfile=dist/index.js",
+    "postbuild": "cd dist && 7z a -tzip index.zip index.js*"
+  },
+  "author": "Karthick.S",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.114",
+    "esbuild": "^0.17.14"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1347.0",
+    "dayjs": "^1.11.7"
+  }
+}

@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Transform: "AWS::Serverless-2016-10-31"
+
+Description: >
+  Scheduled Lambda function that will call the cost explorer and will send mail.
+Parameters:
+  sender:
+    Type: String
+    Default: "xyz@xyz.com"
+    Description: mail id of the sender.
+
+  receiver:
+    Type: String
+    Default: "xyz@xyz.com"
+    Description: mail id of the receiver.
+
+  env:
+    Type: String
+    Default: sbx
+    Description: environment.
+
+  application:
+    Type: String
+    Default: "test"
+    Description: name of the application.
+
+Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: costexplorer-lambda-execution-role
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: costexplorer-lambda-execution-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: "*"
+                Resource: "*"
+
+  costexplorerFunction:
+    Type: "AWS::Serverless::Function"
+    Properties:
+      Description: "Lambda to explore the cost of each resources or services and send mail"
+      FunctionName: "Lambda_Costexplorer"
+      Handler: index.handler
+      Runtime: nodejs18.x
+      Role: !GetAtt LambdaExecutionRole.Arn
+      CodeUri: ../dist/index.zip
+      Environment:
+        Variables:
+          Env: !Ref env
+          Receiver: !Ref receiver
+          Sender: !Ref sender
+      MemorySize: 512
+      Timeout: 60
+
+  CostExplorerEventRule:
+    Type: AWS::Events::Rule
+    DependsOn: costexplorerFunction
+    Properties:
+      Description: "Trigger weekly once to check the aws cost and send mail"
+      ScheduleExpression: "cron(30 07 ? * MON *)" #"cron(30 5 ? * FRI *)"
+      State: "ENABLED"
+      Targets:
+        - Arn: !GetAtt "costexplorerFunction.Arn"
+          Id: "StartFunction"
+
+  LambdaStartPermission:
+    Type: "AWS::Lambda::Permission"
+    Properties:
+      Action: "lambda:InvokeFunction"
+      FunctionName: !GetAtt "costexplorerFunction.Arn"
+      Principal: "events.amazonaws.com"
+      SourceArn: !GetAtt CostExplorerEventRule.Arn
